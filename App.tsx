@@ -1,131 +1,259 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+'use client';
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React, {useState} from 'react';
 import {
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
   View,
+  Text,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+import {User, Match, Message} from './utils/types';
+import {mockMatches, mockUsers} from './utils/mockData';
+import MatchModal from './components/MatchModal/MatchModal';
+import ChatInterface from './components/ChatInterface/ChatInterface';
+import MatchesList from './components/MatchesList/MatchesList';
+import ProfileCard from './components/ProfileCard/ProfileCard';
+import styles from './App.styles';
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+// Main App Component
+const BumbleApp = () => {
+  const [currentScreen, setCurrentScreen] = useState<
+    'discover' | 'matches' | 'chat' | 'profile'
+  >('discover');
+  const [currentUserIndex, setCurrentUserIndex] = useState(0);
+  const [matches, setMatches] = useState<Match[]>(mockMatches);
+  const [showMatchModal, setShowMatchModal] = useState(false);
+  const [newMatch, setNewMatch] = useState<User | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [chatMessages, setChatMessages] = useState<Message[]>([]);
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+  const currentUser = mockUsers[currentUserIndex];
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  const handleLike = () => {
+    if (Math.random() > 0.75) {
+      const newMatchData = {
+        id: Date.now().toString(),
+        user: currentUser,
+        matchedAt: new Date(),
+      };
+      setMatches(prev => [newMatchData, ...prev]);
+      setNewMatch(currentUser);
+      setShowMatchModal(true);
+    }
+    nextUser();
   };
 
-  /*
-   * To keep the template simple and small we're adding padding to prevent view
-   * from rendering under the System UI.
-   * For bigger apps the recommendation is to use `react-native-safe-area-context`:
-   * https://github.com/AppAndFlow/react-native-safe-area-context
-   *
-   * You can read more about it here:
-   * https://github.com/react-native-community/discussions-and-proposals/discussions/827
-   */
-  const safePadding = '5%';
+  const handlePass = () => {
+    nextUser();
+  };
+
+  const handleSuperLike = () => {
+    const newMatchData = {
+      id: Date.now().toString(),
+      user: currentUser,
+      matchedAt: new Date(),
+    };
+    setMatches(prev => [newMatchData, ...prev]);
+    setNewMatch(currentUser);
+    setShowMatchModal(true);
+    nextUser();
+  };
+
+  const nextUser = () => {
+    if (currentUserIndex < mockUsers.length - 1) {
+      setCurrentUserIndex(prev => prev + 1);
+    } else {
+      setCurrentUserIndex(0);
+    }
+  };
+
+  const handleSelectMatch = (match: Match) => {
+    setSelectedMatch(match);
+    setChatMessages([]);
+    setCurrentScreen('chat');
+  };
+
+  const handleSendMessage = (text: string) => {
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      text,
+      timestamp: new Date(),
+      fromMe: true,
+    };
+    setChatMessages(prev => [...prev, newMessage]);
+  };
+
+  const renderScreen = () => {
+    switch (currentScreen) {
+      case 'discover':
+        return (
+          <View style={styles.discoverContainer}>
+            {currentUser ? (
+              <ProfileCard
+                user={currentUser}
+                onLike={handleLike}
+                onPass={handlePass}
+                onSuperLike={handleSuperLike}
+              />
+            ) : (
+              <View style={styles.noMoreProfiles}>
+                <Text style={styles.noMoreText}>No more profiles</Text>
+                <Text style={styles.noMoreSubtext}>
+                  Check back later for new matches!
+                </Text>
+              </View>
+            )}
+          </View>
+        );
+
+      case 'matches':
+        return (
+          <View style={styles.matchesScreen}>
+            <Text style={styles.screenTitle}>Matches</Text>
+            <MatchesList matches={matches} onSelectMatch={handleSelectMatch} />
+          </View>
+        );
+
+      case 'chat':
+        return selectedMatch ? (
+          <ChatInterface
+            user={selectedMatch.user}
+            messages={chatMessages}
+            onBack={() => setCurrentScreen('matches')}
+            onSendMessage={handleSendMessage}
+          />
+        ) : null;
+
+      case 'profile':
+        return (
+          <View style={styles.profileScreen}>
+            <Text style={styles.screenTitle}>Profile</Text>
+            <View style={styles.profilePlaceholder}>
+              <Text style={styles.profilePlaceholderIcon}>👤</Text>
+              <Text style={styles.profilePlaceholderTitle}>
+                Profile Settings
+              </Text>
+              <Text style={styles.profilePlaceholderSubtitle}>
+                Edit your profile and preferences
+              </Text>
+            </View>
+          </View>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
-    <View style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#F59E0B" />
+
+      {/* Header */}
+      {currentScreen !== 'chat' && (
+        <LinearGradient colors={['#FCD34D', '#F59E0B']} style={styles.header}>
+          <View style={styles.headerContent}>
+            <Text style={styles.headerTitle}>Peep Bumbly</Text>
+          </View>
+        </LinearGradient>
+      )}
+
+      {/* Main Content */}
+      <LinearGradient
+        colors={['#FFFBEB', '#FEF3C7']}
+        style={styles.mainContent}>
+        {renderScreen()}
+      </LinearGradient>
+
+      {/* Bottom Navigation */}
+      {currentScreen !== 'chat' && (
+        <View style={styles.bottomNav}>
+          <TouchableOpacity
+            style={[
+              styles.navButton,
+              currentScreen === 'discover' && styles.activeNavButton,
+            ]}
+            onPress={() => setCurrentScreen('discover')}
+            activeOpacity={0.7}>
+            {currentScreen === 'discover' ? (
+              <LinearGradient
+                colors={['#FCD34D', '#F59E0B']}
+                style={styles.navButtonGradient}>
+                <Text style={styles.activeNavIcon}>♥</Text>
+              </LinearGradient>
+            ) : (
+              <Text style={styles.navIcon}>♥</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.navButton,
+              currentScreen === 'matches' && styles.activeNavButton,
+            ]}
+            onPress={() => setCurrentScreen('matches')}
+            activeOpacity={0.7}>
+            {currentScreen === 'matches' ? (
+              <LinearGradient
+                colors={['#FCD34D', '#F59E0B']}
+                style={styles.navButtonGradient}>
+                <Text style={styles.activeNavIcon}>💬</Text>
+              </LinearGradient>
+            ) : (
+              <View>
+                <Text style={styles.navIcon}>💬</Text>
+                {matches.length > 0 && (
+                  <LinearGradient
+                    colors={['#FCD34D', '#F59E0B']}
+                    style={styles.notificationBadge}>
+                    <Text style={styles.notificationText}>
+                      {matches.length}
+                    </Text>
+                  </LinearGradient>
+                )}
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.navButton,
+              currentScreen === 'profile' && styles.activeNavButton,
+            ]}
+            onPress={() => setCurrentScreen('profile')}
+            activeOpacity={0.7}>
+            {currentScreen === 'profile' ? (
+              <LinearGradient
+                colors={['#FCD34D', '#F59E0B']}
+                style={styles.navButtonGradient}>
+                <Text style={styles.activeNavIcon}>👤</Text>
+              </LinearGradient>
+            ) : (
+              <Text style={styles.navIcon}>👤</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Match Modal */}
+      <MatchModal
+        user={newMatch}
+        visible={showMatchModal}
+        onClose={() => {
+          setShowMatchModal(false);
+          setNewMatch(null);
+        }}
+        onSendMessage={() => {
+          setShowMatchModal(false);
+          setNewMatch(null);
+          setCurrentScreen('matches');
+        }}
       />
-      <ScrollView
-        style={backgroundStyle}>
-        <View style={{paddingRight: safePadding}}>
-          <Header/>
-        </View>
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-            paddingHorizontal: safePadding,
-            paddingBottom: safePadding,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </View>
+    </SafeAreaView>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
-
-export default App;
+export default BumbleApp;
