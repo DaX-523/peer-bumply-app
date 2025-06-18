@@ -1,5 +1,3 @@
-'use client';
-
 import React, {useState} from 'react';
 import {
   View,
@@ -10,14 +8,44 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 
-import {User, Match, Message} from './utils/types';
-import {mockMatches, mockUsers} from './utils/mockData';
-import MatchModal from './components/MatchModal/MatchModal';
-import ChatInterface from './components/ChatInterface/ChatInterface';
-import MatchesList from './components/MatchesList/MatchesList';
-import ProfileCard from './components/ProfileCard/ProfileCard';
-import styles from './App.styles';
+import styles from './Home.styles';
+import {
+  MatchesList,
+  ProfileCard,
+  MatchModal,
+  ChatInterface,
+} from '../../components';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import {NavigationContainer} from '@react-navigation/native';
+import Login from '../Login/Login';
+import {useAuth} from '../../context/AuthContext';
+import Register from '../Register/Register';
+import {Match, Message, User} from '../../utils/types';
+import {mockMatches, mockUsers} from '../../utils/mockData';
 
+const Stack = createNativeStackNavigator();
+
+const Home = () => {
+  const {setUser} = useAuth();
+  return (
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen
+          name="login"
+          component={Login}
+          options={{title: 'Login'}}
+          initialParams={{setUser}}
+        />
+        <Stack.Screen
+          name="register"
+          component={Register}
+          options={{title: 'Register'}}
+          initialParams={{setUser}}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+};
 // Main App Component
 const BumbleApp = () => {
   const [currentScreen, setCurrentScreen] = useState<
